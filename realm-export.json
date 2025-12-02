@@ -61,8 +61,8 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost:*/*"],
-      "webOrigins": ["http://localhost"],
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
       "attributes": {
         "access.token.lifespan": "3600"
       }

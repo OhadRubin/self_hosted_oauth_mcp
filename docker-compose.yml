@@ -44,7 +44,8 @@ services:
       KEYCLOAK_URL: http://keycloak:9090
       KEYCLOAK_REALM: mcp
       KEYCLOAK_CLIENT_ID: mcp-server
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+    volumes:
+      - ./.env:/app/.env:ro
     depends_on:
       keycloak-init:
         condition: service_completed_successfully

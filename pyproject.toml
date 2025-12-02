@@ -1,0 +1,10 @@
+[project]
+name = "self-hosted-oauth-mcp"
+version = "0.1.0"
+description = "Self-hosted OAuth MCP server with Keycloak"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=2.0.0",
+    "httpx>=0.27.0",
+    "python-dotenv>=1.0.0",
+]

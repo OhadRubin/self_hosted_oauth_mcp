@@ -1,0 +1,83 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "9000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - keycloak
+      - mcp-server
+    networks:
+      - mcp-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 9090
+      KC_HOSTNAME_URL: http://localhost:9000
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_SPI_COOKIE_DEFAULT_SAME_SITE_ATTRIBUTE: "None"
+    volumes:
+      - ./realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9090'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    networks:
+      - mcp-network
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      KEYCLOAK_URL: http://keycloak:9090
+      KEYCLOAK_REALM: mcp
+      KEYCLOAK_CLIENT_ID: mcp-server
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+    depends_on:
+      keycloak-init:
+        condition: service_completed_successfully
+    networks:
+      - mcp-network
+
+  keycloak-init:
+    image: python:3.12-slim
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      KEYCLOAK_ADMIN_URL: http://keycloak:9090
+      KEYCLOAK_PUBLIC_URL: http://keycloak:9090
+      KEYCLOAK_ADMIN_USER: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_REALM: mcp
+      KEYCLOAK_CLIENT_ID: mcp-server
+      ENV_FILE: /output/.env
+    volumes:
+      - ./setup_keycloak.py:/app/setup_keycloak.py:ro
+      - ./:/output
+    working_dir: /app
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Keycloak..."
+        sleep 5
+        pip install -q httpx python-dotenv
+        python setup_keycloak.py
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge
